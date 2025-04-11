@@ -1,0 +1,7 @@
+".\Objects\main.obj",
+".\Objects\Key.obj",
+".\Objects\Led.obj",
+".\Objects\onewire.obj",
+".\Objects\Seg.obj" 
+TO ".\Objects\大模板" 
+PRINT(".\Listings\大模板.m51") RAMSIZE(256) 

@@ -1,0 +1,8 @@
+".\Objects\Init.obj",
+".\Objects\Key.obj",
+".\Objects\Seg.obj",
+".\Objects\iic.obj",
+".\Objects\Led.obj",
+".\Objects\main.obj" 
+TO ".\Objects\202313141300412" 
+PRINT(".\Listings\202313141300412.m51") RAMSIZE(256) 

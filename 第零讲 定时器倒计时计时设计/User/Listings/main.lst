@@ -1,0 +1,194 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              02/25/2025 21:15:47 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Drive) DEBUG OBJECTEXTEND PRINT
+                    -(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          /*头文件生声明区*/
+   2          #include <REGX52.H>
+   3          #include "Key.h"
+   4          #include "Seg.h"
+   5          
+   6          
+   7          /*变量声明区*/
+   8          unsigned char Key_SlowDown;
+   9          unsigned char Key_Val,Key_Up,Key_Down,Key_Old;
+  10          unsigned char Seg_SlowDown;
+  11          unsigned char Seg_Pos;//数码管扫描变量
+  12          unsigned char Seg_Buf[] = {10,10,10,10,10,10} ;//数码管显示数据存放变量
+  13          unsigned int Timer_1000ms;
+  14          unsigned char Time_Count = 30;
+  15          unsigned char Seg_Mode = 0; //显示界面模式 0为显示 1为设置
+  16          unsigned char System_Flag ; //1为开始 2为复位 3为切换 4为设置
+  17          unsigned char Set_Date[] = {15,30,60};//设置参数
+  18          unsigned char Set_Date_Index = 1;
+  19          unsigned int Seg_Flicker500ms; 
+  20          bit Seg_FlickerMode;
+  21          
+  22          
+  23          /*按键处理函数*/
+  24          void Key_Proc()
+  25          {
+  26   1        if(Key_SlowDown) return;
+  27   1        Key_SlowDown = 1; //按键减速
+  28   1        
+  29   1        Key_Val = Key_Read();
+  30   1        Key_Down = Key_Val & (Key_Val^Key_Old);//检测下降
+  31   1        Key_Up = ~Key_Val & (Key_Val^Key_Old);//检测上升
+  32   1        Key_Old = Key_Val;
+  33   1        
+  34   1        switch(Key_Down)
+  35   1        {
+  36   2          case 1://1按下 开始
+  37   2              if(Seg_Mode == 0) System_Flag = 1; 
+  38   2          break;
+  39   2          case 2://2按下 复位
+  40   2              if(Seg_Mode == 0) Time_Count = Set_Date[Set_Date_Index];
+  41   2          break;
+  42   2          case 3://3按下 切换
+  43   2              if(Seg_Mode == 1) Time_Count = Set_Date[Set_Date_Index]; //保存设置的参数
+  44   2              Seg_Mode ^= 1 ;//即Seg_Mode = Seg_Mode^1 
+  45   2          break;
+  46   2          case 4://4按下 设置
+  47   2              if(Seg_Mode == 1)
+  48   2              {
+  49   3                if(++Set_Date_Index == 3) Set_Date_Index =0;//设置参数    
+  50   3              }
+  51   2        }
+  52   1      }
+  53          
+  54          /*信息处理函数*/
+C51 COMPILER V9.56.0.0   MAIN                                                              02/25/2025 21:15:47 PAGE 2   
+
+  55          
+  56          
+  57          
+  58          void Seg_Proc()
+  59          {
+  60   1        if(Seg_SlowDown) return;
+  61   1        Seg_SlowDown = 1;//数码管减速
+  62   1        
+  63   1        Seg_Buf[0] = Seg_Mode + 1;
+  64   1        if(Seg_Mode == 0)//系统在显示界面
+  65   1        {
+  66   2          Seg_Buf[4] = Time_Count / 10 %10;
+  67   2          Seg_Buf[5] = Time_Count % 10;
+  68   2        }
+  69   1        else//系统在设置界面
+  70   1        {
+  71   2          if(Seg_FlickerMode == 0)
+  72   2          {
+  73   3          Seg_Buf[4] = Set_Date[Set_Date_Index] / 10 %10;
+  74   3          Seg_Buf[5] = Set_Date[Set_Date_Index] % 10;
+  75   3          }
+  76   2          else
+  77   2          {
+  78   3          Seg_Buf[4] = 10;
+  79   3          Seg_Buf[5] = 10 ;
+  80   3          }     
+  81   2        }
+  82   1      }
+  83          
+  84          /*其他显示函数*/
+  85          void Led_Proc()
+  86          {
+  87   1        if(Time_Count == 0) 
+  88   1        {
+  89   2          P1 = 0x00;//灯全亮
+  90   2          P2_3 = 0;//蜂鸣器使能
+  91   2        }
+  92   1        else
+  93   1        {
+  94   2          P1 = 0xff;
+  95   2          P2_3 = 1;
+  96   2        }
+  97   1      }
+  98          
+  99          /*定时器0初始化*/
+ 100          void Timer0_Init(void)    //1毫秒@12.000MHz
+ 101          { 
+ 102   1        TMOD &= 0xF0;     //设置定时器模式
+ 103   1        TMOD |= 0x01;     //设置定时器模式
+ 104   1        TL0 = 0x18;       //设置定时初始值
+ 105   1        TH0 = 0xFC;       //设置定时初始值
+ 106   1        TF0 = 0;          //清除TF0标志
+ 107   1        TR0 = 1;          //定时器0开始计时
+ 108   1        ET0 = 1;  
+ 109   1        EA = 1; 
+ 110   1      }
+ 111          
+ 112          /*定时器0中断服务函数*/
+ 113          void Timer0Server() interrupt 1
+ 114          {
+ 115   1        TL0 = 0x18;       
+ 116   1        TH0 = 0xFC;
+C51 COMPILER V9.56.0.0   MAIN                                                              02/25/2025 21:15:47 PAGE 3   
+
+ 117   1      
+ 118   1        if(++Key_SlowDown == 10) Key_SlowDown = 0;
+ 119   1        if(++Seg_SlowDown == 500) Seg_SlowDown = 0;
+ 120   1        if(++Seg_Pos==6) Seg_Pos=0;
+ 121   1        Seg_Disp(Seg_Pos,Seg_Buf[Seg_Pos]);//数码管显示模块
+ 122   1        
+ 123   1        if(System_Flag == 1) //倒计时模块
+ 124   1        {
+ 125   2          if(++Timer_1000ms == 1000)
+ 126   2          {
+ 127   3            Timer_1000ms = 0;
+ 128   3            Time_Count--;
+ 129   3            if(Time_Count == 255) Time_Count = 0;
+ 130   3          } 
+ 131   2        }
+ 132   1        
+ 133   1        if(++Seg_Flicker500ms > 500) 
+ 134   1        {
+ 135   2          Seg_Flicker500ms = 0;
+ 136   2          Seg_FlickerMode ^= 1;
+ 137   2        }
+ 138   1        
+ 139   1        
+ 140   1      
+ 141   1          
+ 142   1      }
+ 143          
+ 144          void main()
+ 145          {
+ 146   1        
+ 147   1        Timer0_Init();
+ 148   1        
+ 149   1        while(1)
+ 150   1        {
+ 151   2          Key_Proc();
+ 152   2          Seg_Proc();
+ 153   2          Led_Proc();
+ 154   2        }
+ 155   1      }
+ 156          
+ 157          
+ 158          
+ 159          
+ 160          
+ 161          
+ 162          
+ 163          
+ 164          
+ 165          
+ 166          
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    397    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     24    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      1    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,49 @@
+C51 COMPILER V9.56.0.0   LED                                                               04/11/2025 03:10:36 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE LED
+OBJECT MODULE PLACED IN .\Objects\Led.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE ..\Driver\Led.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Driver) DEBUG OBJECTEX
+                    -TEND PRINT(.\Listings\Led.lst) TABS(2) OBJECT(.\Objects\Led.obj)
+
+line level    source
+
+   1          #include "Led.h"
+   2          
+   3          idata unsigned char temp_1 = 0x00;
+   4          idata unsigned char temp_old_1 = 0xff;
+   5          
+   6          void Led_Disp(unsigned char *ucLed)
+   7          {
+   8   1       unsigned char temp;
+   9   1         temp_1=0x00;
+  10   1         temp_1 = (ucLed[0] << 0) | (ucLed[1] << 1) | (ucLed[2] << 2) | (ucLed[3] << 3) |
+  11   1               (ucLed[4] << 4) | (ucLed[5] << 5) | (ucLed[6] << 6) | (ucLed[7] << 7);
+  12   1        if (temp_1 != temp_old_1)
+  13   1        {
+  14   2          P0 = ~temp_1;
+  15   2          
+  16   2      
+  17   2          temp = P2 & 0x1f;    // ????P2???5¦Ë
+  18   2          temp = temp | 0x80;  // ??0x80???§Ý????
+  19   2          P2 = temp;           // §Õ??P2
+  20   2          temp = P2 & 0x1f;    // ????P2???5¦Ë
+  21   2          P2 = temp;           // §Õ??P2???????????
+  22   2          
+  23   2          temp_old_1 = temp_1;
+  24   2        }
+  25   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    127    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =      2    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

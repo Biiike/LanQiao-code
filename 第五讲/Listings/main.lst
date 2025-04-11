@@ -1,0 +1,189 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              03/06/2025 22:43:35 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE User\main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(.\Drive) DEBUG OBJECTEXTEND P
+                    -RINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          /* 头文件声明区 */
+   2          #include <Init.h>
+   3          #include <Led.h>
+   4          #include <Seg.h>
+   5          #include <Key.h>
+   6          #include <intrins.h>
+   7          #include <ds1302.h>
+   8          #include <string.h> //用于memcpy(Set_Dat,ucDate,9) 将Set_Dat的9为数据复制到ucDate中
+   9          #include <STC15F2K60S2.H>
+  10          
+  11          
+  12          /* 变量声明区*/
+  13          unsigned char Key_Up,Key_Down,Key_Old,Key_Val;
+  14          unsigned int Key_Slow_Down,Seg_Slow_Down;
+  15          unsigned char Seg_Pos;
+  16          unsigned char Seg_Buf[8] = {10,10,10,10,10,10,10,10};
+  17          unsigned char Seg_Point[8] = {0,0,0,0,0,0,0,0};
+  18          unsigned char ucLed[8] = {0,0,0,0,0,0,0,0};
+  19          unsigned char ucRtc[3] = {0x23,0x59,0x55};// 时钟数据存放数组
+  20          unsigned char Seg_Disp_Mode = 0; // 0-时钟显示 1-闹钟显示 2-日期显示 3-时钟设置 4-闹钟设置 5-日期设置
+  21          unsigned char ucAlarm[9] = {0x00,0x00,0x00,0x00,0x01,0x00,0xbb,0xbb,0xbb};//0xbb显示为-
+  22          unsigned char Alarm_Index;
+  23          unsigned char ucDate[3] = {0x22,0x12,0x12};//日期数据存放数组
+  24          unsigned char Set_Dat[9];//设置数据存放数组
+  25          
+  26          /* 键盘处理函数 */
+  27          void Key_Proc()
+  28          {
+  29   1        if(Key_Slow_Down) return;
+  30   1        Key_Slow_Down = 1;
+  31   1        
+  32   1        Key_Val = Key_Read();
+  33   1        Key_Down = Key_Val & (Key_Val ^ Key_Old);
+  34   1        Key_Up =~Key_Val & (Key_Val ^ Key_Old);
+  35   1        Key_Old = Key_Val;
+  36   1        
+  37   1        switch(Key_Down)
+  38   1        {
+  39   2          case 14:
+  40   2            if(Seg_Disp_Mode < 3)
+  41   2            {
+  42   3              if(++Seg_Disp_Mode == 3) Seg_Disp_Mode = 0;
+  43   3            }
+  44   2          break;
+  45   2          case 15:
+  46   2            if(Seg_Disp_Mode < 3)
+  47   2            {
+  48   3              Seg_Disp_Mode += 3;
+  49   3              Alarm_Index = 0;
+  50   3              switch(Seg_Disp_Mode)
+  51   3              {
+  52   4                case 3://时钟设置界面
+  53   4                  memcpy(Set_Dat,ucRtc,9);//把时钟数据给到设置数据
+  54   4                break;
+C51 COMPILER V9.56.0.0   MAIN                                                              03/06/2025 22:43:35 PAGE 2   
+
+  55   4                case 4://闹钟设置界面
+  56   4                  memcpy(Set_Dat,ucAlarm,9);//把闹钟数据给到设置数据
+  57   4                break;
+  58   4                case 5://日期设置界面
+  59   4                  memcpy(Set_Dat,ucDate,9);
+  60   4                break;
+  61   4              }
+  62   3            }
+  63   2          }
+  64   1          
+  65   1      }
+  66          
+  67          /* 信息处理函数 */
+  68          void Seg_Proc()
+  69          {
+  70   1        unsigned char i;
+  71   1        if(Seg_Slow_Down) return;
+  72   1        Seg_Slow_Down = 1;
+  73   1        
+  74   1        /* 信息读取函数 */
+  75   1        Read_Rtc(ucRtc);//读取时钟实时数据
+  76   1        Read_Date(ucDate);//读取日期实时数据
+  77   1        
+  78   1        /* 数据处理函数 */
+  79   1        switch(Seg_Disp_Mode)
+  80   1        {
+  81   2          case 0 ://时钟显示
+  82   2            for(i=0;i <3;i++)
+  83   2              {
+  84   3                Seg_Buf[3*i] = ucRtc[i] /16;
+  85   3                Seg_Buf[3*i+1] = ucRtc[i] %16;
+  86   3              }
+  87   2              Seg_Buf[2] = Seg_Buf[5] = 11;
+  88   2          break;    
+  89   2          case 1://闹钟显示
+  90   2            for(i=0;i<3;i++)
+  91   2            {
+  92   3              Seg_Buf[3*i] = ucAlarm[3*Alarm_Index+i] /16;
+  93   3              Seg_Buf[3*i+1] = ucAlarm[3*Alarm_Index+i] %16;
+  94   3            }
+  95   2            Seg_Buf[2] = Seg_Buf[5] = 11;   
+  96   2          break;
+  97   2          case 2://日期显示
+  98   2            for(i=0;i<3;i++)
+  99   2          
+ 100   2              {
+ 101   3                Seg_Buf[3*i] = ucDate[i] /16;
+ 102   3                Seg_Buf[3*i+1] = ucDate[i] %16;
+ 103   3              }
+ 104   2            Seg_Buf[2] = Seg_Buf[5] = 11;
+ 105   2          break;
+ 106   2          default:
+ 107   2            for(i=0;i <3;i++)
+ 108   2              {
+ 109   3                Seg_Buf[3*i] = Set_Dat[i+Alarm_Index*3] /16;
+ 110   3                Seg_Buf[3*i+1] = Set_Dat[i+Alarm_Index*3] %16;
+ 111   3              }
+ 112   2              Seg_Buf[2] = Seg_Buf[5] = 11; 
+ 113   2        }
+ 114   1            
+ 115   1      }
+ 116          /* 其他显示函数*/
+C51 COMPILER V9.56.0.0   MAIN                                                              03/06/2025 22:43:35 PAGE 3   
+
+ 117          void Led_Proc()
+ 118          {
+ 119   1        
+ 120   1      }
+ 121          
+ 122          /* 中断服务函数 */
+ 123          void Timer0_Server() interrupt 1
+ 124          {
+ 125   1        if(++Key_Slow_Down == 10) Key_Slow_Down = 0;
+ 126   1        if(++Seg_Slow_Down == 100) Seg_Slow_Down = 0;
+ 127   1        if(++Seg_Pos == 8) Seg_Pos = 0;
+ 128   1        Seg_Disp(Seg_Pos,Seg_Buf[Seg_Pos],Seg_Point[Seg_Pos]);
+ 129   1        Led_Disp(Seg_Pos,ucLed[Seg_Pos]);
+ 130   1      }
+ 131          
+ 132          
+ 133          /* 定时器初始化函数 */
+ 134          void Timer0_Init(void)    //1毫秒@12.000MHz
+ 135          {
+ 136   1        AUXR &= 0x7F;     //定时器时钟12T模式
+ 137   1        TMOD &= 0xF0;     //设置定时器模式
+ 138   1        TL0 = 0x18;       //设置定时初始值
+ 139   1        TH0 = 0xFC;       //设置定时初始值
+ 140   1        TF0 = 0;        //清除TF0标志
+ 141   1        TR0 = 1;        //定时器0开始计时
+ 142   1        ET0 = 1;        //中断定时器0打开
+ 143   1        EA = 1;         //总中断打开
+ 144   1      }
+ 145          
+ 146          
+ 147          /* Main */
+ 148          void main()
+ 149          {
+ 150   1        System_Init();
+ 151   1        Timer0_Init();
+ 152   1        Set_Rtc(ucRtc);
+ 153   1        Set_Date(ucDate);
+ 154   1        
+ 155   1        while(1)
+ 156   1        {
+ 157   2          Seg_Proc();
+ 158   2          Key_Proc();
+ 159   2          Led_Proc();   
+ 160   2        }
+ 161   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    631    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     59       1
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

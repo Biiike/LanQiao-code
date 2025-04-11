@@ -1,0 +1,224 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              04/11/2025 03:10:36 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Driver) DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <iic.h>
+   2          #include <Key.h>
+   3          #include <Led.h>
+   4          #include <Seg.h>
+   5          #include <ds1302.h>
+   6          
+   7          unsigned char ucRtc[3] = {0x02,0x09,0x59};
+   8          unsigned char ucLed[8] = {0,0,0,0,0,0,0,0};
+   9          unsigned char Seg_Buf[8] = {10,10,10,10,10,10,10,10};
+  10          unsigned char Seg_Point[8] = {0,0,0,0,0,0,0,0};
+  11          unsigned char Seg_Pos;
+  12          unsigned char Key_SlowDown;
+  13          unsigned int Seg_SlowDown;
+  14          unsigned char Key_Val,Key_Down,Key_Up,Key_Old;
+  15          
+  16          unsigned char Sys_Mode;//0 时间 1 输入 2 记录
+  17          unsigned int Input_Dat = 0;
+  18          unsigned char Input_Val;
+  19          unsigned char Trigger;
+  20          unsigned char Trigger_Max;
+  21          unsigned char Dat_Time[2] = {0x00,0x00};
+  22          unsigned char Dat_0,Dat_1;
+  23          unsigned char Dat_2,Dat_3;
+  24          unsigned int Val_new,Val_old;
+  25          
+  26          void Seg_Reset()
+  27          {
+  28   1        unsigned char i;
+  29   1        for(i = 0; i <8 ;i++)
+  30   1        {
+  31   2          Seg_Buf[i] = 10;
+  32   2          Seg_Point[i] = 0;
+  33   2        }
+  34   1      }
+  35          
+  36          void Key_Proc()
+  37          {
+  38   1        if(Key_SlowDown < 10) return;
+  39   1        Key_SlowDown = 0;
+  40   1        Key_Val = Key_Read();
+  41   1        Key_Down = Key_Val & (Key_Old ^ Key_Val);
+  42   1        Key_Up = ~Key_Val & (Key_Old ^ Key_Val);
+  43   1        Key_Old = Key_Val;
+  44   1        
+  45   1        Trigger = 0;
+  46   1        if(Key_Down == 99)
+  47   1        {
+  48   2          Trigger = 1;
+  49   2          Input_Val = 0;
+  50   2        }
+  51   1        if(1<=Key_Down  && Key_Down <=9)
+  52   1        {   
+  53   2          Trigger = 1;
+  54   2          Input_Val = Key_Val;
+C51 COMPILER V9.56.0.0   MAIN                                                              04/11/2025 03:10:36 PAGE 2   
+
+  55   2        }
+  56   1        if(Trigger == 1 && Trigger_Max < 4)
+  57   1        {
+  58   2          Trigger_Max++;  
+  59   2          Input_Dat = Input_Dat * 10 + Input_Val ;
+  60   2          if(Trigger_Max == 1)
+  61   2          {
+  62   3            Dat_Time[0] = ucRtc[0];
+  63   3            Dat_Time[1] = ucRtc[1];
+  64   3          }
+  65   2          if(Trigger_Max == 4)
+  66   2          {
+  67   3            Val_old = Val_new;
+  68   3            Val_new = Input_Dat;
+  69   3      
+  70   3          }
+  71   2        }
+  72   1        
+  73   1        switch(Key_Down)
+  74   1        {
+  75   2          case 11:
+  76   2            if(++Sys_Mode > 2 ) Sys_Mode = 0;
+  77   2            Input_Dat = 0;
+  78   2            Trigger_Max = 0;
+  79   2            Seg_Reset();
+  80   2          break;
+  81   2          case 12:
+  82   2            if(Sys_Mode == 1)
+  83   2            {
+  84   3              Input_Dat = 0;
+  85   3              Trigger_Max = 0;
+  86   3            }
+  87   2          break;
+  88   2        }
+  89   1        
+  90   1        
+  91   1      }
+  92          
+  93          void Seg_Proc()
+  94          {
+  95   1        if(Seg_SlowDown < 400) return;
+  96   1        Seg_SlowDown = 0;
+  97   1        
+  98   1        
+  99   1        Read_Rtc(ucRtc);
+ 100   1        
+ 101   1        switch(Sys_Mode)
+ 102   1        {
+ 103   2          case 0:
+ 104   2            Seg_Buf[0]=ucRtc[0] / 16 % 16;
+ 105   2            Seg_Buf[1]=ucRtc[0]  % 16;
+ 106   2            Seg_Buf[3]=ucRtc[1] / 16 % 16;
+ 107   2            Seg_Buf[4]=ucRtc[1] % 16;
+ 108   2            Seg_Buf[6]=ucRtc[2] / 16 % 16;
+ 109   2            Seg_Buf[7]=ucRtc[2] % 16;
+ 110   2            Seg_Buf[2] = Seg_Buf[5] = 14;
+ 111   2          break;
+ 112   2          case 1:
+ 113   2            Seg_Buf[0]=15;
+ 114   2            if(Input_Dat == 0) 
+ 115   2            {
+ 116   3              Seg_Buf[4] = Seg_Buf[5] = Seg_Buf[6] = Seg_Buf[7] = 10;
+C51 COMPILER V9.56.0.0   MAIN                                                              04/11/2025 03:10:36 PAGE 3   
+
+ 117   3            }
+ 118   2            else
+ 119   2            {
+ 120   3              if(Input_Dat>999)
+ 121   3                Seg_Buf[4] = Input_Dat /1000 %10;
+ 122   3              if(Input_Dat>99)
+ 123   3                Seg_Buf[5] = Input_Dat /100 %10;
+ 124   3              if(Input_Dat>9)
+ 125   3                Seg_Buf[6] = Input_Dat /10 %10;
+ 126   3              Seg_Buf[7] = Input_Dat % 10;
+ 127   3            }       
+ 128   2          break;
+ 129   2          case 2:
+ 130   2            Seg_Buf[0] = 13;
+ 131   2            Seg_Buf[3]=Dat_Time[0] / 16 % 16;
+ 132   2            Seg_Buf[4]=Dat_Time[0]  % 16;
+ 133   2            Seg_Buf[6]=Dat_Time[1] / 16 % 16;
+ 134   2            Seg_Buf[7]=Dat_Time[1] % 16;
+ 135   2            Seg_Buf[5] = 14;
+ 136   2          
+ 137   2            Dat_0 = Seg_Buf[3] * 10 + Seg_Buf[4];
+ 138   2            Dat_1 = Seg_Buf[6] * 10 + Seg_Buf[7];
+ 139   2            EEPROM_Write(&Dat_0, 0,1);
+ 140   2            EEPROM_Write(&Dat_1, 1,1);
+ 141   2          
+ 142   2            Dat_2 = (unsigned char)(Input_Dat >> 8);
+ 143   2            Dat_3 = (unsigned char)(Input_Dat & 0x00ff);
+ 144   2            EEPROM_Write(&Dat_2, 2,1);
+ 145   2            EEPROM_Write(&Dat_3, 3,1);
+ 146   2          break;
+ 147   2        }
+ 148   1      }
+ 149          
+ 150          void Led_Proc()
+ 151          {
+ 152   1        ucLed[0] = (Sys_Mode == 0)? 1:0;
+ 153   1        ucLed[1] = (Sys_Mode == 1)? 1:0;
+ 154   1        ucLed[2] = (Sys_Mode == 2)? 1:0;
+ 155   1        ucLed[3] = (Val_old<Val_new)? 1 : 0;
+ 156   1      }
+ 157          
+ 158          void Timer0_Isr(void) interrupt 1
+ 159          {
+ 160   1        Key_SlowDown++;
+ 161   1        Seg_SlowDown++;
+ 162   1        if(++Seg_Pos > 8) Seg_Pos = 0;
+ 163   1        Seg_Disp(Seg_Pos,Seg_Buf[Seg_Pos],Seg_Point[Seg_Pos]);
+ 164   1        Led_Disp(ucLed);
+ 165   1      
+ 166   1      }
+ 167          
+ 168          void Timer0_Init(void)    //1毫秒@12.000MHz
+ 169          {
+ 170   1        AUXR &= 0x7F;     //定时器时钟12T模式
+ 171   1        TMOD &= 0xF0;     //设置定时器模式
+ 172   1        TL0 = 0x18;       //设置定时初始值
+ 173   1        TH0 = 0xFC;       //设置定时初始值
+ 174   1        TF0 = 0;        //清除TF0标志
+ 175   1        TR0 = 1;        //定时器0开始计时
+ 176   1        ET0 = 1;        //使能定时器0中断
+ 177   1        EA = 1;
+ 178   1      }
+C51 COMPILER V9.56.0.0   MAIN                                                              04/11/2025 03:10:36 PAGE 4   
+
+ 179          
+ 180          void main()
+ 181          {
+ 182   1        P0 = 0xff;
+ 183   1        P2 = P2 & 0x1f | 0x80;
+ 184   1        P2 &= 0x1f;
+ 185   1        
+ 186   1        Timer0_Init();
+ 187   1        Write_Rtc(ucRtc);
+ 188   1        while(1)
+ 189   1        {
+ 190   2          Key_Proc();
+ 191   2          Seg_Proc();
+ 192   2          Led_Proc();
+ 193   2        }
+ 194   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    760    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     51    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

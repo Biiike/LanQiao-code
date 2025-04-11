@@ -1,0 +1,72 @@
+C51 COMPILER V9.56.0.0   ULTRASOUND                                                        03/24/2025 23:14:54 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE ULTRASOUND
+OBJECT MODULE PLACED IN .\Objects\ultrasound.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE ..\Drive\ultrasound.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Drive) DEBUG OBJ
+                    -ECTEXTEND PRINT(.\Listings\ultrasound.lst) TABS(2) OBJECT(.\Objects\ultrasound.obj)
+
+line level    source
+
+   1          #include <ultrasound.h>
+   2          
+   3          void Delay12us(void)  //@12.000MHz
+   4          {
+   5   1        unsigned char data i;
+   6   1      
+   7   1        _nop_();
+   8   1        _nop_();
+   9   1        i = 33;
+  10   1        while (--i);
+  11   1      }
+  12          
+  13          
+  14          void Ut_Wave_Send() //产生8个占空比为50%的方波信号
+  15          {
+  16   1        unsigned char i;
+  17   1        for(i=0;i<8;i++)
+  18   1        {
+  19   2          Tx = 1;
+  20   2          Delay12us();
+  21   2          Tx = 0;
+  22   2          Delay12us();
+  23   2        }
+  24   1      }
+  25          
+  26          unsigned int Ut_Wave_Receive()
+  27          {
+  28   1        unsigned int time;
+  29   1        TMOD &= 0x0f;
+  30   1        TH1=TL1=0;
+  31   1        TR1=1;
+  32   1        
+  33   1        while((Rx==1) && (TF1==0));//等待，当接收到信号或计时器溢出时跳出
+  34   1        TR1=0;
+  35   1        
+  36   1        if(TF1 == 0)
+  37   1        {
+  38   2          time = TH1 << 8 | TL1;
+  39   2          return (time*0.017); //返回距离值
+  40   2        }
+  41   1        else
+  42   1        {
+  43   2          TF1 = 0;//恢复溢出标志位
+  44   2          return 0;
+  45   2        }
+  46   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     79    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+C51 COMPILER V9.56.0.0   ULTRASOUND                                                        03/24/2025 23:14:54 PAGE 2   
+
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

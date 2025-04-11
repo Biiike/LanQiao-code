@@ -1,0 +1,249 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              04/10/2025 01:52:53 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Driver) DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC15F2K60S2.H>
+   2          #include <iic.h>
+   3          #include <Led.h>
+   4          #include <Seg.h>
+   5          #include <Key.h>
+   6          #include <ultrasound.h>
+   7          
+   8          unsigned char Key_SlowDown;
+   9          unsigned int Seg_SlowDown;
+  10          
+  11          unsigned char Seg_Pos;
+  12          unsigned char Seg_Buf[8]={10,10,10,10,10,10,10,10};
+  13          unsigned char Seg_Point[8] = {0,0,0,0,0,0,0,0,};
+  14          unsigned char ucLed[8] = {0,0,0,0,0,0,0,0};
+  15          unsigned char Key_Val,Key_Down,Key_Up,Key_Old;
+  16          
+  17          unsigned char Sys_Mode = 0;//0 测距 1参数 2记录
+  18          bit Change_Mode = 0;
+  19          
+  20          unsigned int Distance;
+  21          unsigned int Max_Dat = 60,Min_Dat = 10;
+  22          unsigned int V_Dat;
+  23          unsigned char Trigger_zhuan;
+  24          
+  25          bit Trigger_normal;
+  26          bit Trigger_led;
+  27          unsigned char warn;
+  28          
+  29          unsigned char Timer_100ms;
+  30          void Seg_Reset()
+  31          {
+  32   1        unsigned char i;
+  33   1        for(i = 0; i < 8 ; i++)
+  34   1        {
+  35   2          Seg_Buf[i] = 10;
+  36   2          Seg_Point[i] = 0;
+  37   2        }
+  38   1      }
+  39          
+  40          void Key_Proc()
+  41          {
+  42   1        unsigned char i;
+  43   1        unsigned char a;
+  44   1        if(Key_SlowDown < 10) return;
+  45   1        Key_SlowDown = 0;
+  46   1          
+  47   1        Distance = Ut_Wave_Data();
+  48   1        V_Dat = Ad_Read(0x03);
+  49   1        
+  50   1        Key_Val = Key_Read();
+  51   1        Key_Down = Key_Val & (Key_Old ^ Key_Val);
+  52   1        Key_Up = ~Key_Val & (Key_Old ^ Key_Val);
+  53   1        Key_Old = Key_Val;
+  54   1        
+C51 COMPILER V9.56.0.0   MAIN                                                              04/10/2025 01:52:53 PAGE 2   
+
+  55   1        if(Trigger_zhuan == 1)
+  56   1        {
+  57   2          for(i = 0; i<5 ;i++)
+  58   2          {
+  59   3            if(51*i < V_Dat && V_Dat < 51* (i+1))
+  60   3              Max_Dat = 50 + (i*10);
+  61   3          }
+  62   2        }
+  63   1        
+  64   1       if (Trigger_zhuan == 2)
+  65   1        {
+  66   2          for(a = 0; a<5 ;a++)
+  67   2          {
+  68   3            if(51*a < V_Dat && V_Dat < 51* (a+1))
+  69   3              Min_Dat = 0 + (a*10);
+  70   3          } 
+  71   2        }
+  72   1      
+  73   1      
+  74   1        switch(Key_Down)
+  75   1        {
+  76   2          case 4:
+  77   2            if(++Sys_Mode > 2) Sys_Mode = 0;
+  78   2            Seg_Reset();
+  79   2          break;
+  80   2          case 5:
+  81   2            Change_Mode ^= 1;
+  82   2            if(Sys_Mode == 2)
+  83   2              warn = 0;
+  84   2          break;
+  85   2          case 9:
+  86   2            if(Sys_Mode == 1)
+  87   2            {
+  88   3              if(Change_Mode == 0)
+  89   3              {
+  90   4                Trigger_zhuan = 0;
+  91   4                Max_Dat = Max_Dat + 10;
+  92   4                if(Max_Dat > 90) Max_Dat = 50;
+  93   4              }
+  94   3              else
+  95   3                Trigger_zhuan = 1;
+  96   3            }
+  97   2          break;
+  98   2          case 8:
+  99   2            if(Sys_Mode == 1)
+ 100   2            {
+ 101   3              if(Change_Mode == 0)
+ 102   3              {
+ 103   4                Trigger_zhuan = 0;
+ 104   4                Min_Dat = Min_Dat + 10;
+ 105   4                if(Min_Dat > 40) Min_Dat = 0;
+ 106   4              }
+ 107   3              else
+ 108   3                Trigger_zhuan = 2;
+ 109   3            }
+ 110   2          break;
+ 111   2        }
+ 112   1      }
+ 113          
+ 114          void Seg_Proc()
+ 115          {
+ 116   1        if(Seg_SlowDown < 400) return;
+C51 COMPILER V9.56.0.0   MAIN                                                              04/10/2025 01:52:53 PAGE 3   
+
+ 117   1        Seg_SlowDown = 0;
+ 118   1        
+ 119   1        if(Distance >= Min_Dat && Distance <= Max_Dat)
+ 120   1          Trigger_normal = 1;
+ 121   1        
+ 122   1        if((Distance > Max_Dat || Distance < Min_Dat) && Trigger_normal == 1)
+ 123   1        {
+ 124   2          warn++;
+ 125   2          Trigger_normal = 0;
+ 126   2        }
+ 127   1        
+ 128   1        
+ 129   1        switch(Sys_Mode)
+ 130   1        {
+ 131   2          case 0:
+ 132   2            Seg_Buf[0] = 11;
+ 133   2            if(Distance > 99)
+ 134   2              Seg_Buf[5] = Distance / 100 % 10;
+ 135   2            else
+ 136   2              Seg_Buf[5] = 10;
+ 137   2            if(Distance>9)
+ 138   2              Seg_Buf[6] = Distance / 10 %10;
+ 139   2            else
+ 140   2              Seg_Buf[6] = 10;
+ 141   2            Seg_Buf[7] = Distance %10;
+ 142   2          break;
+ 143   2          case 1:
+ 144   2            Seg_Buf[0] = 12;
+ 145   2            if(Change_Mode)
+ 146   2              Seg_Buf[1] = 2;
+ 147   2            else
+ 148   2              Seg_Buf[1] = 1;
+ 149   2            Seg_Buf[2] = 10;
+ 150   2            Seg_Buf[3] = Min_Dat / 10;
+ 151   2            Seg_Buf[4] = Min_Dat % 10;
+ 152   2            Seg_Buf[5] = 14;
+ 153   2            Seg_Buf[6] = Max_Dat / 10;
+ 154   2            Seg_Buf[7] = Max_Dat % 10;
+ 155   2          break;
+ 156   2          case 2:
+ 157   2            Seg_Buf[0] = 13;
+ 158   2            if(warn > 9) 
+ 159   2              Seg_Buf[7] = 14;
+ 160   2            else
+ 161   2              Seg_Buf[7] = warn;
+ 162   2          break;
+ 163   2        }
+ 164   1      }
+ 165          
+ 166          void Led_Proc()
+ 167          {
+ 168   1        ucLed[0] = (Sys_Mode == 0)? 1:0;
+ 169   1        ucLed[1] = (Sys_Mode == 1)? 1:0;
+ 170   1        ucLed[2] = (Sys_Mode == 2)? 1:0;
+ 171   1        ucLed[7] = (Min_Dat <= Distance && Max_Dat >= Distance)?1:Trigger_led;
+ 172   1        
+ 173   1      }
+ 174          
+ 175          
+ 176          
+ 177          void Timer0_Isr(void) interrupt 1
+ 178          {
+C51 COMPILER V9.56.0.0   MAIN                                                              04/10/2025 01:52:53 PAGE 4   
+
+ 179   1        ++Key_SlowDown;
+ 180   1        ++Seg_SlowDown;
+ 181   1        
+ 182   1        if(++Seg_Pos>8) Seg_Pos = 0;
+ 183   1        Seg_Disp(Seg_Pos,Seg_Buf[Seg_Pos],Seg_Point[Seg_Pos]);
+ 184   1        Led_Disp(Seg_Pos, ucLed[Seg_Pos]);
+ 185   1        
+ 186   1        if(++Timer_100ms == 100)
+ 187   1        {
+ 188   2          Timer_100ms = 0;
+ 189   2          Trigger_led ^= 1;
+ 190   2        }
+ 191   1      }
+ 192          
+ 193          void Timer0_Init(void)    //1毫秒@12.000MHz
+ 194          {
+ 195   1        AUXR &= 0x7F;     //定时器时钟12T模式
+ 196   1        TMOD &= 0xF0;     //设置定时器模式
+ 197   1        TL0 = 0x18;       //设置定时初始值
+ 198   1        TH0 = 0xFC;       //设置定时初始值
+ 199   1        TF0 = 0;        //清除TF0标志
+ 200   1        TR0 = 1;        //定时器0开始计时
+ 201   1        ET0 = 1;        //使能定时器0中断
+ 202   1        EA = 1;
+ 203   1      }
+ 204          
+ 205          
+ 206          void main()
+ 207          {
+ 208   1        P0 = 0xff;
+ 209   1        P2 = P2 & 0x1f | 0x80;
+ 210   1        P2 &= 0x1f;
+ 211   1        
+ 212   1        Timer0_Init();
+ 213   1        while(1)
+ 214   1        {
+ 215   2          Led_Proc();
+ 216   2          Key_Proc();
+ 217   2          Seg_Proc();
+ 218   2        }
+ 219   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    842    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     44    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      3    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

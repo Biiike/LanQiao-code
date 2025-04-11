@@ -1,0 +1,62 @@
+C51 COMPILER V9.56.0.0   MARTIXKEY                                                         02/18/2025 15:03:50 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MARTIXKEY
+OBJECT MODULE PLACED IN .\Objects\MartixKey.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE MartixKey.c OPTIMIZE(8,SPEED) BROWSE DEBUG OBJECTEXTEND PRINT(.\Listings\
+                    -MartixKey.lst) TABS(2) OBJECT(.\Objects\MartixKey.obj)
+
+line level    source
+
+   1          #include <REGX52.H>
+   2          
+   3          unsigned char MatrixKey()
+   4          {
+   5   1        unsigned char temp = 0;
+   6   1        
+   7   1        P3_4=0, P3_5=1, P3_6=1, P3_7=1;
+   8   1        if(P3_0 == 0) temp=1;
+   9   1        if(P3_1 == 0) temp=5;
+  10   1        if(P3_2 == 0) temp=9;
+  11   1        if(P3_3 == 0) temp=13;
+  12   1        
+  13   1        P3_4=1, P3_5=0, P3_6=1, P3_7=1;
+  14   1        if(P3_0 == 0) temp=2;
+  15   1        if(P3_1 == 0) temp=6;
+  16   1        if(P3_2 == 0) temp=10;
+  17   1        if(P3_3 == 0) temp=14;
+  18   1        
+  19   1        P3_4=1, P3_5=1, P3_6=0, P3_7=1;
+  20   1        if(P3_0 == 0) temp=3;
+  21   1        if(P3_1 == 0) temp=7;
+  22   1        if(P3_2 == 0) temp=11;
+  23   1        if(P3_3 == 0) temp=15;
+  24   1        
+  25   1        P3_4=1, P3_5=1, P3_6=1, P3_7=0;
+  26   1        if(P3_0 == 0) temp=4;
+  27   1        if(P3_1 == 0) temp=8;
+  28   1        if(P3_2 == 0) temp=12;
+  29   1        if(P3_3 == 0) temp=16;
+  30   1        
+  31   1        return temp;
+  32   1          
+  33   1      }
+  34          
+  35          //    MatrixKey_val =MatrixKey(); //Ω®¬Î÷µ
+  36          //    MatrixKey_down = MatrixKey_val & (MatrixKey_val ^ MatrixKey_old); //ºÏ≤‚œ¬Ωµ—ÿ 
+  37          //    MatrixKey_up = ~MatrixKey_val & (MatrixKey_val ^ MatrixKey_old); //ºÏ≤‚…œ…˝—ÿ
+  38          //    MatrixKey_old = MatrixKey_val;//∏®÷˙ºÏ≤‚
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    114    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

@@ -1,0 +1,5 @@
+".\Objects\main.obj",
+".\Objects\Key.obj",
+".\Objects\Seg.obj" 
+TO ".\Objects\202313141300412" 
+PRINT(".\Listings\202313141300412.m51") RAMSIZE(256) 

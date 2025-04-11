@@ -1,0 +1,267 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              03/27/2025 09:28:33 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Driver;..\Driver) DEBUG OBJECTE
+                    -XTEND PRINT(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC15F2K60S2.H>
+   2          #include <onewire.h>
+   3          #include <Seg.h>
+   4          #include <ds1302.h>
+   5          #include <Init.h>
+   6          #include <Key.h>
+   7          #include <Led.h>
+   8          
+   9          unsigned char Seg_Buf[8] = {0,0,0,0,0,0,0,0}, Seg_Pos, Seg_Point[8] = {0,0,0,0,0,0,0,0};
+  10          unsigned char Seg_Slow_Down,Key_Slow_Down,Led_Slow_Down;
+  11          unsigned char Key_Val,Key_Up,Key_Down,Key_Old;
+  12          unsigned char Led_Buf[8] = {0,0,0,0,0,0,0,0};
+  13          
+  14          unsigned char Sys_Mode = 0; //0温度 1时间 2参数
+  15          bit Work_Mode = 0;
+  16          
+  17          float T_Data;//温度
+  18          unsigned char Rtc[3] = {0x23,0x59,0x50};//时间
+  19          unsigned char T_Set = 23;//温度参数
+  20          
+  21          bit T_Flag = 0;
+  22          bit Relay_Flag;
+  23          bit Led_Flag;
+  24          bit Led_Swing_Flag;
+  25          
+  26          unsigned int Timer_5000ms = 0;
+  27          unsigned char Timer_100ms = 0;
+  28          
+  29          void Relay(bit a)
+  30          {
+  31   1        if(a)
+  32   1        {
+  33   2          P0 = 0x10;
+  34   2          P2 = P2 & 0x1f |0xa0;
+  35   2          P2 &= 0x1f;
+  36   2        }
+  37   1        else
+  38   1        {
+  39   2          P0 = 0x00;//关闭继电器
+  40   2          P2 = P2 & 0x1f |0xa0;
+  41   2          P2 &= 0x1f;
+  42   2        }
+  43   1      }
+  44          
+  45          void Seg_Reset()
+  46          {
+  47   1        unsigned char i;
+  48   1        for(i=0;i<8;i++)
+  49   1        {
+  50   2          Seg_Buf[i] = 16;
+  51   2        }
+  52   1      }
+  53          
+  54          void Seg_Proc()
+C51 COMPILER V9.56.0.0   MAIN                                                              03/27/2025 09:28:33 PAGE 2   
+
+  55          {
+  56   1        if(Seg_Slow_Down) return;
+  57   1        Seg_Slow_Down = 1;
+  58   1        
+  59   1        T_Data = Read_T();
+  60   1        Read_Rtc(Rtc);
+  61   1        
+  62   1        switch(Sys_Mode)
+  63   1        {
+  64   2          case 0:
+  65   2            Seg_Reset();
+  66   2            Seg_Buf[0] = 17;
+  67   2            Seg_Buf[1] = 1;
+  68   2            Seg_Buf[5] = (unsigned char) T_Data /10 %10;
+  69   2            Seg_Buf[6] = (unsigned char) T_Data %10;
+  70   2            Seg_Buf[7] = (unsigned int) (T_Data *10) %10;
+  71   2            Seg_Point[6] = 1;
+  72   2          break;
+  73   2          
+  74   2          case 1:
+  75   2            if(T_Flag == 0)
+  76   2            {
+  77   3              Seg_Reset();
+  78   3              Seg_Buf[0] = 17;
+  79   3              Seg_Buf[1] = 2;
+  80   3              Seg_Buf[3] = Rtc[0] /16 %16;
+  81   3              Seg_Buf[4] = Rtc[0]  %16;
+  82   3              Seg_Buf[5] = 18;
+  83   3              Seg_Buf[6] = Rtc[1] /16 %16;
+  84   3              Seg_Buf[7] = Rtc[1]  %16;
+  85   3              Seg_Point[6] = 0;
+  86   3            }
+  87   2            else
+  88   2            {
+  89   3              Seg_Reset();
+  90   3              Seg_Buf[0] = 17;
+  91   3              Seg_Buf[1] = 2;
+  92   3              Seg_Buf[3] = Rtc[1] /16 %16;
+  93   3              Seg_Buf[4] = Rtc[1]  %16;
+  94   3              Seg_Buf[5] = 18;
+  95   3              Seg_Buf[6] = Rtc[2] /16 %16;
+  96   3              Seg_Buf[7] = Rtc[2]  %16;
+  97   3              Seg_Point[6] = 0;
+  98   3            }
+  99   2          break;
+ 100   2          
+ 101   2          case 2:
+ 102   2            Seg_Reset();
+ 103   2            Seg_Buf[0] = 17;
+ 104   2            Seg_Buf[1] = 3;
+ 105   2            Seg_Buf[6] = T_Set / 10 %10;
+ 106   2            Seg_Buf[7] = T_Set %10;
+ 107   2          break;
+ 108   2        }
+ 109   1        
+ 110   1      }
+ 111            
+ 112          void Key_Proc()
+ 113          {
+ 114   1        if(Key_Slow_Down) 
+ 115   1          return;
+ 116   1        Key_Slow_Down = 1;
+C51 COMPILER V9.56.0.0   MAIN                                                              03/27/2025 09:28:33 PAGE 3   
+
+ 117   1        
+ 118   1        Key_Val = Key_Read();
+ 119   1        Key_Down = Key_Val &(Key_Old ^ Key_Val);
+ 120   1        Key_Up = ~Key_Val &(Key_Old ^ Key_Val);
+ 121   1        Key_Old = Key_Val;
+ 122   1        
+ 123   1        switch(Key_Down)
+ 124   1        {
+ 125   2          case 12:
+ 126   2            if(++Sys_Mode == 3) Sys_Mode = 0;
+ 127   2          break;
+ 128   2          
+ 129   2          case 16://参数加
+ 130   2            if(Sys_Mode == 2)
+ 131   2              if(++T_Set >99) 
+ 132   2                T_Set = 99;
+ 133   2          break;
+ 134   2          
+ 135   2          case 17://参数减 时间界面区别
+ 136   2            if(Sys_Mode == 2)
+ 137   2              if(--T_Set <10)
+ 138   2                T_Set = 10;
+ 139   2          break;
+ 140   2              
+ 141   2          case 13:
+ 142   2            Work_Mode ^= 1; 
+ 143   2            Relay(0);   
+ 144   2          break;
+ 145   2        }
+ 146   1        
+ 147   1        
+ 148   1        if(Key_Old == 17 && Sys_Mode == 1)
+ 149   1          T_Flag = 1;
+ 150   1        else 
+ 151   1          T_Flag = 0;
+ 152   1      }
+ 153          
+ 154          void Led_Proc()
+ 155          {
+ 156   1        if(Led_Slow_Down) 
+ 157   1          return;
+ 158   1        Led_Slow_Down = 1;
+ 159   1        
+ 160   1        if(Work_Mode == 0)//继电器控制功能
+ 161   1        {
+ 162   2          Led_Flag = 0;
+ 163   2          Led_Buf[1] = 1;
+ 164   2          if(T_Data>T_Set)//温度控制模式
+ 165   2          {
+ 166   3            Relay(1);
+ 167   3          }
+ 168   2          else
+ 169   2          {
+ 170   3            Relay(0); 
+ 171   3          }
+ 172   2          
+ 173   2        }
+ 174   1        else
+ 175   1        {
+ 176   2          Led_Buf[1] = 0;
+ 177   2          if(Rtc[1] == 0 && Rtc[2] == 0 )//时间控制模式
+ 178   2          {
+C51 COMPILER V9.56.0.0   MAIN                                                              03/27/2025 09:28:33 PAGE 4   
+
+ 179   3            Relay_Flag = 1;   
+ 180   3            Relay(1);
+ 181   3            Led_Buf[0] = 1;//打开L1
+ 182   3          }
+ 183   2        }
+ 184   1      }
+ 185            
+ 186            
+ 187          
+ 188          
+ 189            void Timer0_Isr(void) interrupt 1 
+ 190          {
+ 191   1        if(++Seg_Slow_Down == 100) Seg_Slow_Down = 0;
+ 192   1        if(++Key_Slow_Down == 10) Key_Slow_Down = 0;
+ 193   1        if(++Led_Slow_Down == 10) Led_Slow_Down = 0;  
+ 194   1        if(++Seg_Pos == 8) Seg_Pos = 0;
+ 195   1        Led_Disp(Seg_Pos,Led_Buf[Seg_Pos]);
+ 196   1        Seg_Disp(Seg_Buf[Seg_Pos],Seg_Pos,Seg_Point[Seg_Pos]);
+ 197   1        
+ 198   1        
+ 199   1        if(Relay_Flag == 1 )//继电器五秒关闭
+ 200   1          if(++Timer_5000ms == 5000) 
+ 201   1          {
+ 202   2            Relay_Flag = 0;
+ 203   2            Timer_5000ms = 0;   
+ 204   2            Relay(0); 
+ 205   2            Led_Flag = 0;
+ 206   2            Led_Buf[0] = 0;//关闭L1
+ 207   2          }
+ 208   1      }
+ 209          
+ 210            void Timer0_Init(void)    //1毫秒@12.000MHz
+ 211          {
+ 212   1        AUXR &= 0x7F;     //定时器时钟12T模式
+ 213   1        TMOD &= 0xF0;     //设置定时器模式
+ 214   1        TL0 = 0x18;       //设置定时初始值
+ 215   1        TH0 = 0xFC;       //设置定时初始值
+ 216   1        TF0 = 0;        //清除TF0标志
+ 217   1        TR0 = 1;        //定时器0开始计时
+ 218   1        ET0 = 1;
+ 219   1        EA = 1;
+ 220   1      }
+ 221          
+ 222          
+ 223          void main()
+ 224          {
+ 225   1        Timer0_Init();
+ 226   1        Sys_Init();
+ 227   1        Write_Rtc(Rtc);
+ 228   1        
+ 229   1        while(1)
+ 230   1        {
+ 231   2          Seg_Proc();
+ 232   2          Key_Proc();
+ 233   2          Led_Proc();
+ 234   2        }
+ 235   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    677    ----
+   CONSTANT SIZE    =   ----    ----
+C51 COMPILER V9.56.0.0   MAIN                                                              03/27/2025 09:28:33 PAGE 5   
+
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     44    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =      5       1
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
