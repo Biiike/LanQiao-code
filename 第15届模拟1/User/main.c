@@ -140,7 +140,7 @@ void Seg_Proc()
 			EEPROM_Write(&Dat_1, 1,1);
 		
 			Dat_2 = (unsigned char)(Input_Dat >> 8);
-			Dat_3 = (unsigned char)(Input_Dat & 0x00ff);
+			Dat_3 = (unsigned char)(Input_Dat & 0x00ff);//”–Œ Ã‚
 			EEPROM_Write(&Dat_2, 2,1);
 			EEPROM_Write(&Dat_3, 3,1);
 		break;
