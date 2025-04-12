@@ -1,0 +1,251 @@
+C51 COMPILER V9.56.0.0   MAIN                                                              04/13/2025 02:30:54 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE MAIN
+OBJECT MODULE PLACED IN .\Objects\main.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE main.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Driver) DEBUG OBJECTEXTEND PRIN
+                    -T(.\Listings\main.lst) TABS(2) OBJECT(.\Objects\main.obj)
+
+line level    source
+
+   1          #include <STC15F2K60S2.H>
+   2          #include <init.h>
+   3          #include <iic.h>
+   4          #include <Seg.h>
+   5          #include <Key.h>
+   6          #include <Led.h>
+   7          #include <ds1302.h>
+   8          #include <onewire.h>
+   9          #include <ultrasound.h>
+  10          #include <intrins.h>
+  11          #include <Uart.h>
+  12          
+  13          unsigned char Key_Slowdown;
+  14          unsigned int Seg_Slowdown;
+  15          
+  16          unsigned char Key_Val,Key_Down,Key_Up,Key_Old;
+  17          unsigned char Seg_Pos;
+  18          unsigned char Seg_Buf[8] = {10,10,10,10,10,10,10,10};
+  19          unsigned char Seg_Point[8] = {0,0,0,0,0,0,0,0};
+  20          unsigned char Led_Buf[8] = {0,0,0,0,0,0,0,0};
+  21          unsigned char ucRtc[3] = {0x23,0x59,0x55};
+  22          unsigned char Sys_Mode = 0;
+  23          unsigned int Timer_1000ms;
+  24          
+  25          unsigned char Uart_Recv[10];
+  26          unsigned char Uart_Recv_Index;
+  27          unsigned char Uart_Recv_Tick;
+  28          unsigned char Uart_Rx_Flag;
+  29          unsigned char Str[] = {1,2};
+  30          
+  31          float T_Data;
+  32          float V_Data;
+  33          float R_Data;
+  34          unsigned int U_Data;
+  35          unsigned int freq;
+  36          
+  37          void Seg_Reset()
+  38          {
+  39   1        unsigned char i = 0;
+  40   1        for(i = 0; i <8; i++)
+  41   1        {
+  42   2          Seg_Buf[i] = 10;
+  43   2        }
+  44   1      }
+  45          
+  46          void Key_Proc()
+  47          {
+  48   1        if(Key_Slowdown<10) return;
+  49   1        Key_Slowdown = 0;
+  50   1        
+  51   1        T_Data = Read_T();
+  52   1        Read_Rtc(ucRtc);
+  53   1      
+  54   1        Key_Val = Key_Read();
+C51 COMPILER V9.56.0.0   MAIN                                                              04/13/2025 02:30:54 PAGE 2   
+
+  55   1        Key_Down = Key_Val & (Key_Old ^ Key_Val);
+  56   1        Key_Up = ~Key_Val & (Key_Old ^ Key_Val);
+  57   1        Key_Old = Key_Val;
+  58   1        
+  59   1        
+  60   1        
+  61   1        switch(Key_Down)
+  62   1        {
+  63   2          case 4:
+  64   2            if(++Sys_Mode >4) Sys_Mode = 0;
+  65   2            Uart_Send("change");
+  66   2            Seg_Reset();
+  67   2          break;
+  68   2        }
+  69   1      }
+  70          
+  71          void Seg_Proc()
+  72          {
+  73   1        if(Seg_Slowdown<400) return;
+  74   1        Seg_Slowdown = 0;
+  75   1        R_Data = Ad_Read(0x01) / 51.0;
+  76   1        R_Data = Ad_Read(0x01) / 51.0;
+  77   1        U_Data = Ut_Wava_Read();
+  78   1        
+  79   1        
+  80   1        switch(Sys_Mode)
+  81   1        {
+  82   2          case 0:
+  83   2            Seg_Buf[0] = (unsigned char)T_Data /10 % 10;
+  84   2            Seg_Buf[1] = (unsigned char)T_Data % 10;
+  85   2            Seg_Buf[2] = (unsigned int)(T_Data *10) % 10;
+  86   2            Seg_Buf[7] = Uart_Recv[0];
+  87   2          break;
+  88   2          case 1:
+  89   2            Seg_Buf[0] = ucRtc[0] /16 % 16;
+  90   2            Seg_Buf[1] = ucRtc[0]  % 16;
+  91   2            Seg_Buf[2] = ucRtc[1] /16 % 16;
+  92   2            Seg_Buf[3] = ucRtc[1]  % 16;
+  93   2            Seg_Buf[4] = ucRtc[2] /16 % 16;
+  94   2            Seg_Buf[5] = ucRtc[2]  % 16;
+  95   2          break;
+  96   2          case 2:
+  97   2            Seg_Buf[0] = freq / 10000 %10;
+  98   2            Seg_Buf[1] = freq / 1000 %10;
+  99   2            Seg_Buf[2] = freq / 100 %10;
+ 100   2            Seg_Buf[3] = freq / 10 %10;
+ 101   2            Seg_Buf[4] = freq %10;
+ 102   2            
+ 103   2          break;
+ 104   2          case 3:
+ 105   2            Seg_Buf[0] = (unsigned char)V_Data %10;
+ 106   2            Seg_Buf[1] = (unsigned int)(V_Data*100)/10%10;
+ 107   2            Seg_Buf[2] = (unsigned int)(V_Data*100)%10;
+ 108   2          
+ 109   2            Seg_Buf[5] = (unsigned char)R_Data %10;
+ 110   2            Seg_Buf[6] = (unsigned int)(R_Data*100)/10%10;
+ 111   2            Seg_Buf[7] = (unsigned int)(R_Data*100)%10;
+ 112   2          break;
+ 113   2          case 4:
+ 114   2            Seg_Buf[0] = U_Data/100 %10;
+ 115   2            Seg_Buf[1] = U_Data /10%10;
+ 116   2            Seg_Buf[2] = U_Data%10;
+C51 COMPILER V9.56.0.0   MAIN                                                              04/13/2025 02:30:54 PAGE 3   
+
+ 117   2          break;
+ 118   2        }
+ 119   1        
+ 120   1        V_Data = Ad_Read(0x03) / 51.0;
+ 121   1        V_Data = Ad_Read(0x03) / 51.0;
+ 122   1      
+ 123   1      }
+ 124          
+ 125          void Led_Proc()
+ 126          {
+ 127   1        
+ 128   1      }
+ 129          
+ 130          void Timer1_Isr(void) interrupt 3
+ 131          {
+ 132   1        Key_Slowdown++;
+ 133   1        Seg_Slowdown++;
+ 134   1        if(++Seg_Pos>8) Seg_Pos = 0;
+ 135   1        Seg_Disp(Seg_Pos,Seg_Buf[Seg_Pos],Seg_Point[Seg_Pos]);
+ 136   1        Led_Disp(Led_Buf);
+ 137   1        
+ 138   1        if(++Timer_1000ms == 1000)
+ 139   1        {
+ 140   2          Timer_1000ms = 0;
+ 141   2          freq = TH0<<8|TL0;
+ 142   2          TH0 = TL0 = 0;
+ 143   2        }
+ 144   1      
+ 145   1          
+ 146   1      }
+ 147          
+ 148          
+ 149          void Timer0_Init(void)    //@12.000MHz
+ 150          {
+ 151   1        AUXR &= 0x7F;     //定时器时钟12T模式
+ 152   1        TMOD &= 0xF0;     //设置定时器模式
+ 153   1        TMOD |= 0x05;     //设置定时器模式
+ 154   1        TL0 = 0x00;       //设置定时初始值
+ 155   1        TH0 = 0x00;       //设置定时初始值
+ 156   1        TF0 = 0;        //清除TF0标志
+ 157   1        TR0 = 1;        //定时器0开始计时
+ 158   1      
+ 159   1      }
+ 160          
+ 161          void Timer1_Init(void)    //1毫秒@12.000MHz
+ 162          {
+ 163   1        AUXR &= 0xBF;     //定时器时钟12T模式
+ 164   1        TMOD &= 0x0F;     //设置定时器模式
+ 165   1        TL1 = 0x18;       //设置定时初始值
+ 166   1        TH1 = 0xFC;       //设置定时初始值
+ 167   1        TF1 = 0;        //清除TF1标志
+ 168   1        TR1 = 1;        //定时器1开始计时
+ 169   1        ET1 = 1;        //使能定时器1中断
+ 170   1        EA = 1;
+ 171   1      }
+ 172          
+ 173          void Uart1Server() interrupt 4
+ 174          {
+ 175   1        if(RI == 1)
+ 176   1        {
+ 177   2          Uart_Recv[Uart_Recv_Index] = SBUF;
+ 178   2          Uart_Recv_Index++;
+C51 COMPILER V9.56.0.0   MAIN                                                              04/13/2025 02:30:54 PAGE 4   
+
+ 179   2          RI = 0;
+ 180   2        }
+ 181   1      }
+ 182          
+ 183          
+ 184          
+ 185          void Delay750ms(void) //@12.000MHz
+ 186          {
+ 187   1        unsigned char data i, j, k;
+ 188   1      
+ 189   1        _nop_();
+ 190   1        _nop_();
+ 191   1        i = 35;
+ 192   1        j = 51;
+ 193   1        k = 182;
+ 194   1        do
+ 195   1        {
+ 196   2          do
+ 197   2          {
+ 198   3            while (--k);
+ 199   3          } while (--j);
+ 200   2        } while (--i);
+ 201   1      }
+ 202          
+ 203          
+ 204          void main()
+ 205          {
+ 206   1        Timer0_Init();
+ 207   1        Timer1_Init();
+ 208   1        Uart1_Init(); 
+ 209   1        Sys_Init();
+ 210   1        Read_T();
+ 211   1        Delay750ms();
+ 212   1        Read_T();
+ 213   1        Write_Rtc(ucRtc);
+ 214   1          
+ 215   1        while(1)
+ 216   1        {
+ 217   2          Key_Proc();
+ 218   2          Led_Proc();
+ 219   2          Seg_Proc();
+ 220   2        }
+ 221   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    960    ----
+   CONSTANT SIZE    =      7    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     69    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)

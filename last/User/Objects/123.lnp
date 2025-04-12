@@ -1,0 +1,12 @@
+".\Objects\main.obj",
+".\Objects\Init.obj",
+".\Objects\Key.obj",
+".\Objects\Led.obj",
+".\Objects\Seg.obj",
+".\Objects\ds1302.obj",
+".\Objects\iic.obj",
+".\Objects\onewire.obj",
+".\Objects\ultrasound.obj",
+".\Objects\Uart.obj" 
+TO ".\Objects\123" 
+PRINT(".\Listings\123.m51") RAMSIZE(256) 

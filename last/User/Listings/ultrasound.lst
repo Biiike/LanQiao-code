@@ -1,0 +1,78 @@
+C51 COMPILER V9.56.0.0   ULTRASOUND                                                        04/13/2025 01:12:21 PAGE 1   
+
+
+C51 COMPILER V9.56.0.0, COMPILATION OF MODULE ULTRASOUND
+OBJECT MODULE PLACED IN .\Objects\ultrasound.obj
+COMPILER INVOKED BY: E:\Keilv5\C51\BIN\C51.EXE ..\Driver\ultrasound.c OPTIMIZE(8,SPEED) BROWSE INCDIR(..\Driver) DEBUG O
+                    -BJECTEXTEND PRINT(.\Listings\ultrasound.lst) TABS(2) OBJECT(.\Objects\ultrasound.obj)
+
+line level    source
+
+   1          #include <ultrasound.h>
+   2          #include <intrins.h>
+   3          
+   4          sbit Tx = P1^0;
+   5          sbit Rx = P1^1;
+   6          
+   7          void Delay12us(void)  //@12.000MHz
+   8          {
+   9   1        unsigned char data i;
+  10   1      
+  11   1        _nop_();
+  12   1        _nop_();
+  13   1        i = 38;
+  14   1        while (--i);
+  15   1      }
+  16          
+  17          void Ut_Wava_Init()
+  18          {
+  19   1        unsigned char i;
+  20   1        EA = 0;
+  21   1        for(i = 0; i<8; i++)
+  22   1        {
+  23   2          Tx = 1;
+  24   2          Delay12us();
+  25   2          Tx = 0;
+  26   2          Delay12us();
+  27   2        }
+  28   1        EA = 1;
+  29   1      }
+  30          
+  31          unsigned char Ut_Wava_Read()
+  32          {
+  33   1        unsigned time = 0 ;
+  34   1        CMOD = 0x00;
+  35   1        CH = CL = 0;
+  36   1        Ut_Wava_Init();
+  37   1        CR = 1;
+  38   1        while ((Rx == 1) && (CF == 0));
+  39   1        CR = 0;
+  40   1        
+  41   1        if(CF == 0)
+  42   1        {
+  43   2          time = (CH<<8|CL) * 0.017;
+  44   2          return time;
+  45   2        }
+  46   1        else
+  47   1        {
+  48   2          CF = 0;
+  49   2          return 0;
+  50   2        }
+  51   1        
+  52   1      }
+
+
+C51 COMPILER V9.56.0.0   ULTRASOUND                                                        04/13/2025 01:12:21 PAGE 2   
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =     87    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =   ----    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
